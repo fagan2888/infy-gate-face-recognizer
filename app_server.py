@@ -44,7 +44,20 @@ def encoder(bin):
     img = numpy.fromstring(bin, numpy.uint8)
     img = cv2.imdecode(img, cv2.IMREAD_UNCHANGED)
     # img = cv2.resize(img, (640, 480))
-    return face_recognition.face_encodings(img)[0]
+    max = 0
+    idx = 0
+    try:
+        face_locations = face_recognition.face_locations(img)
+        for i in range(len(face_locations)):
+            location = face_locations[i]
+            top, right, bottom, left = location
+            area = abs(right - left) * abs(bottom - top)
+            if area > max:
+                max = area
+                idx = i
+        return face_recognition.face_encodings(img, [face_locations[idx]])[0]
+    except:
+        return None
 
 
 @app.route('/encoding', methods=['GET'])
@@ -77,15 +90,21 @@ def identity_post():
         except:
             return "not-found"
 
+
+
 @app.route('/id', methods=['POST'])
 def id_post():
     if request.method == 'POST':
-        results = face_recognition.compare_faces(enc_vals, encoder(request.data))
-        index = [k for k, v in enumerate(results) if v == True]
-        try:
-            return str(enc_keys[index[0]])
-        except:
-            return "not-found"
+        data = encoder(request.data)
+        if data is not None:
+            results = face_recognition.compare_faces(enc_vals, data)
+            index = [k for k, v in enumerate(results) if v == True]
+            try:
+                return jsonify(identity=str(enc_keys[index[0]]))
+            except:
+                return jsonify(identity="not-found")
+        return jsonify(identity="not-found")
+
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0")
