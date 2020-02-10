@@ -140,5 +140,15 @@ def enc():
         return jsonify(identity="not-found")
 
 
+@app.route('/clear', methods=['POST'])
+def clear():
+    if request.method == 'POST':
+        pickle_out = open("encodings.pkl", "wb")
+        pickle.dump({}, pickle_out)
+        pickle_out.close()
+        return jsonify(identity="done")
+
+
+
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0")
