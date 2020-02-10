@@ -1,8 +1,9 @@
+import base64
 import pickle
 from time import time
 
 import cv2
-
+import numpy as np
 import face_recognition
 import numpy
 from flask import *
@@ -96,6 +97,7 @@ def identity_post():
 def id_post():
     if request.method == 'POST':
         data = encoder(request.data)
+        print(data)
         if data is not None:
             results = face_recognition.compare_faces(enc_vals, data)
             index = [k for k, v in enumerate(results) if v == True]
@@ -105,6 +107,42 @@ def id_post():
                 return jsonify(identity="not-found")
         return jsonify(identity="not-found")
 
+@app.route('/verify', methods=['POST'])
+def verify():
+    if request.method == 'POST':
+        json = request.get_json()
+        if json is not None:
+            s = json['image']
+            if s:
+                q = base64.b64decode(s.split(',')[-1].encode())
+                print(q)
+                q = np.frombuffer(q, dtype=np.uint8)
+                q = cv2.imdecode(q, cv2.IMREAD_COLOR)
+                res = face_recognition.compare_faces(enc_vals, face_recognition.face_encodings(q)[0])
+                print(res)
+                index = [k for k, v in enumerate(res) if v == True]
+                try:
+                    return jsonify(identity=str(enc_keys[index[0]]))
+                except:
+                    return jsonify(identity="not-found")
+        return jsonify(identity="not-found")
+
+@app.route('/encode', methods=['POST'])
+def enc():
+    if request.method == 'POST':
+        json = request.get_json()
+        if json is not None:
+            s = json['image']
+            id = json["emp_id"]
+            if s and id:
+                q = base64.b64decode(s.split(',')[-1].encode())
+                print(q)
+                q = np.frombuffer(q, dtype=np.uint8)
+                q = cv2.imdecode(q, cv2.IMREAD_COLOR)
+                enc = face_recognition.face_encodings(q)[0]
+                add_encodings(id, enc)
+                return "saved"
+        return jsonify(identity="not-found")
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0")
