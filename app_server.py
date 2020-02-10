@@ -41,7 +41,9 @@ def add_encodings(key, val):
     enc_vals.append(val)
 
 
-def encoder(bin):
+def encoder(bin, is_base64=False):
+    if is_base64:
+        bin = base64.b64decode(bin.split(',')[-1])
     img = numpy.fromstring(bin, numpy.uint8)
     img = cv2.imdecode(img, cv2.IMREAD_UNCHANGED)
     # img = cv2.resize(img, (640, 480))
@@ -92,7 +94,6 @@ def identity_post():
             return "not-found"
 
 
-
 @app.route('/id', methods=['POST'])
 def id_post():
     if request.method == 'POST':
@@ -107,42 +108,37 @@ def id_post():
                 return jsonify(identity="not-found")
         return jsonify(identity="not-found")
 
+
 @app.route('/verify', methods=['POST'])
 def verify():
     if request.method == 'POST':
-        json = request.get_json()
-        if json is not None:
-            s = json['image']
-            if s:
-                q = base64.b64decode(s.split(',')[-1].encode())
-                print(q)
-                q = np.frombuffer(q, dtype=np.uint8)
-                q = cv2.imdecode(q, cv2.IMREAD_COLOR)
-                res = face_recognition.compare_faces(enc_vals, face_recognition.face_encodings(q)[0])
-                print(res)
-                index = [k for k, v in enumerate(res) if v == True]
+        data = request.get_json()
+
+        if data is not None:
+            img = data['image']
+            if img:
+                results = face_recognition.compare_faces(enc_vals, encoder(img, True))
+                index = [k for k, v in enumerate(results) if v == True]
                 try:
                     return jsonify(identity=str(enc_keys[index[0]]))
                 except:
                     return jsonify(identity="not-found")
         return jsonify(identity="not-found")
 
+
 @app.route('/encode', methods=['POST'])
 def enc():
     if request.method == 'POST':
-        json = request.get_json()
-        if json is not None:
-            s = json['image']
-            id = json["emp_id"]
+        data = request.get_json()
+        if data is not None:
+            s = data['image']
+            id = data["emp_id"]
             if s and id:
-                q = base64.b64decode(s.split(',')[-1].encode())
-                print(q)
-                q = np.frombuffer(q, dtype=np.uint8)
-                q = cv2.imdecode(q, cv2.IMREAD_COLOR)
-                enc = face_recognition.face_encodings(q)[0]
+                enc = encoder(s, True)
                 add_encodings(id, enc)
-                return "saved"
+                return jsonify(identity="saved")
         return jsonify(identity="not-found")
+
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0")

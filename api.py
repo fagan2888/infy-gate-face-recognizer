@@ -24,6 +24,6 @@ results = Parallel(n_jobs=len(files))(delayed(processInput)(file) for file in fi
 print(time()-x)
 
 #
-# pickle_out = open("encodings.pkl","wb")
+# pickle_out = open("encodings_old_1.pkl","wb")
 # pickle.dump(encodings, pickle_out)
 # pickle_out.close()
